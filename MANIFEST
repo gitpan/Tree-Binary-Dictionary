@@ -1,0 +1,7 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/simple.t
+lib/Tree/Binary/Dictionary.pm
+META.yml                                 Module meta-data (added by MakeMaker)
