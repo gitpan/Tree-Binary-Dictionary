@@ -2,16 +2,16 @@ package Tree::Binary::Dictionary;
 
 =head1 NAME
 
-Schedule::Chronic::Distributed - Constrained Distributed Scheduler for Perl
-
-=head1 SYNOPSIS
-
-  use Schedule::Chronic::Distributed;
+Tree::Binary::Dictionary - A dictionary API to a binary tree
 
 =head1 DESCRIPTION
 
-Class representing main scheduler. Used by daemon to schedule jobs, interacts
-with all the objects in the system.
+A simple class to provide a dictionary style API
+to a binary tree of data.
+
+This can provide a useful alternative to a long-lived
+hash in long running daemons and processes.
+
 
 =head1 SYNOPSIS
 
@@ -100,7 +100,7 @@ returns the number of entries in the dictionary
 =cut
 
 use strict;
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 
 use Tree::Binary::Search;
 use Tree::Binary::Visitor::InOrderTraversal;
