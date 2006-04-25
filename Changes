@@ -1,5 +1,7 @@
 Revision history for Perl extension BinaryTree::Dictionary.
 
+0.03 Tue 25 April 2006
+	- moved to blessed array to avoid long lived hash that could be memory greedy
 0.02 Mon 24 April 2006
 	- Fixed mistakes in POD
 0.01 Fri Apr 21 2006

@@ -100,10 +100,16 @@ returns the number of entries in the dictionary
 =cut
 
 use strict;
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 
 use Tree::Binary::Search;
 use Tree::Binary::Visitor::InOrderTraversal;
+
+use constant _COUNTER    => 0;
+use constant _BTREE      => 1;
+use constant _KEYS_VIS   => 2;
+use constant _VALUES_VIS => 3 ;
+use constant _HASH_VIS   => 4;
 
 sub new {
   my ($class,%args) = @_;
@@ -120,77 +126,77 @@ sub new {
   my $values_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
   $values_visitor->setNodeFilter(sub { return shift()->getNodeValue; } );
 
-  my $self = { _counter=>0,_btree => $btree, _keys_vis => $keys_visitor, _values_vis => $values_visitor, _hash_vis=>$hash_visitor };
+  my $self = [ 0, $btree, $keys_visitor, $values_visitor, $hash_visitor ];
   return bless $self, ref $class || $class;
 }
 
 sub count {
-  return shift()->{_counter}
+  return shift()->[_COUNTER];
 }
 
 sub keys {
   my $self = shift;
-  return () unless ($self->{_counter});
-  $self->{_btree}->accept($self->{_keys_vis});
-  return $self->{_keys_vis}->getResults();
+  return () unless ($self->[_COUNTER]);
+  $self->[_BTREE]->accept($self->[_KEYS_VIS]);
+  return $self->[_KEYS_VIS]->getResults();
 }
 
 sub values {
   my $self = shift;
-  return () unless ($self->{_counter});
-  $self->{_btree}->accept($self->{_values_vis});
-  return $self->{_values_vis}->getResults();
+  return () unless ($self->[_COUNTER]);
+  $self->[_BTREE]->accept($self->[_VALUES_VIS]);
+  return $self->[_VALUES_VIS]->getResults();
 }
 
 sub to_hash {
   my $self = shift;
-  return () unless ($self->{_counter});
-  $self->{_btree}->accept($self->{_hash_vis});
-  return $self->{_hash_vis}->getResults();
+  return () unless ($self->[_COUNTER]);
+  $self->[_BTREE]->accept($self->[_HASH_VIS]);
+  return $self->[_HASH_VIS]->getResults();
 }
 
 sub delete {
   my $self = shift;
-  return 0 unless ($self->{_counter});
-  my $ok = eval { $self->{_btree}->delete(shift()); };
+  return 0 unless ($self->[_COUNTER]);
+  my $ok = eval { $self->[_BTREE]->delete(shift()); };
   warn "attempted to delete non-existant key" if $@;
-  $self->{_counter}-- unless ($@);
+  $self->[_COUNTER]-- unless ($@);
   return $ok || 0;
 }
 
 sub exists {
   my $self = shift;
-  return 0 unless ($self->{_counter});
-  return $self->{_btree}->exists(shift());
+  return 0 unless ($self->[_COUNTER]);
+  return $self->[_BTREE]->exists(shift());
 }
 
 sub get {
   my $self = shift;
-  return 0 unless ($self->{_counter});
-  my $value = eval {$self->{_btree}->select(shift()); };
+  return 0 unless ($self->[_COUNTER]);
+  my $value = eval {$self->[_BTREE]->select(shift()); };
   warn "attempted to get value from non-existant key" if $@;
   return $value;
 }
 
 sub add {
   my $self = shift;
-  eval { $self->{_btree}->insert(@_); };
+  eval { $self->[_BTREE]->insert(@_); };
   if ($@) {
     warn $@;
     return 0;
   } else {
-    $self->{_counter}++;
+    $self->[_COUNTER]++;
     return 1;
   }
 }
 
 sub set {
   my $self = shift;
-  if ($self->{_counter} && $self->{_btree}->exists($_[0])) {
-    eval { $self->{_btree}->update(@_); };
+  if ($self->[_COUNTER] && $self->[_BTREE]->exists($_[0])) {
+    eval { $self->[_BTREE]->update(@_); };
   } else {
-    eval { $self->{_btree}->insert(@_); };
-    $self->{_counter}++ unless ($@);
+    eval { $self->[_BTREE]->insert(@_); };
+    $self->[_COUNTER]++ unless ($@);
   }
   if ($@) {
     warn $@;
