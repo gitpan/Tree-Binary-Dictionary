@@ -37,14 +37,25 @@ my %hash = $dictionary->to_hash;
 my @values = $dictionary->values;
 my @keys = $dictionary->keys;
 
+# for long running processes
+$dictionary->rebuild();
 
 =head1 METHODS
 
 =head2 new - constructor
 
-my $dictionary = Tree::Binary::Dictionary->new;
+my $dictionary = Tree::Binary::Dictionary->new (cache => 0);
 
-Instantiates and returns a new dictionary object, doesn't take any arguments.
+Instantiates and returns a new dictionary object.
+
+Optional arguments are cache, which will re-use internal objects and structures
+rather than rebuilding them as required. Default is 1 / True.
+
+=head2 rebuild
+
+$dictionary->rebuild();
+
+Rebuilds the internal binary tree to reduce wasteful memory use
 
 =head2 add
 
@@ -100,7 +111,7 @@ returns the number of entries in the dictionary
 =cut
 
 use strict;
-our $VERSION = 0.03;
+our $VERSION = 0.04;
 
 use Tree::Binary::Search;
 use Tree::Binary::Visitor::InOrderTraversal;
@@ -108,25 +119,34 @@ use Tree::Binary::Visitor::InOrderTraversal;
 use constant _COUNTER    => 0;
 use constant _BTREE      => 1;
 use constant _KEYS_VIS   => 2;
-use constant _VALUES_VIS => 3 ;
+use constant _VALUES_VIS => 3;
 use constant _HASH_VIS   => 4;
+use constant _CACHE_FLAG => 5;
 
 sub new {
   my ($class,%args) = @_;
+
+  my $cache_flag = (defined $args{cache}) ? $args{cache} : 1;
   my $btree = Tree::Binary::Search->new();
   $btree->useStringComparison();
-  my $hash_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
-  $hash_visitor->setNodeFilter(sub {
-				 my ($t) = @_;
-				 return ($t->getNodeKey, $t->getNodeValue());
-			       });
-  my $keys_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
-  $keys_visitor->setNodeFilter(sub { return shift()->getNodeKey; } );
+  my $self = [ 0, $btree, undef, undef, undef, $cache_flag];
 
-  my $values_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
-  $values_visitor->setNodeFilter(sub { return shift()->getNodeValue; } );
+  if ($cache_flag) {
+    my $hash_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
+    $hash_visitor->setNodeFilter(sub {
+				   my ($t) = @_;
+				   return ($t->getNodeKey, $t->getNodeValue());
+				 });
+    $self->[_HASH_VIS] = $hash_visitor;
 
-  my $self = [ 0, $btree, $keys_visitor, $values_visitor, $hash_visitor ];
+    my $keys_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
+    $keys_visitor->setNodeFilter(sub { return shift()->getNodeKey; } );
+    $self->[_KEYS_VIS] = $keys_visitor;
+
+    my $values_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
+    $values_visitor->setNodeFilter(sub { return shift()->getNodeValue; } );
+    $self->[_VALUES_VIS] = $values_visitor;
+  }
   return bless $self, ref $class || $class;
 }
 
@@ -137,22 +157,46 @@ sub count {
 sub keys {
   my $self = shift;
   return () unless ($self->[_COUNTER]);
-  $self->[_BTREE]->accept($self->[_KEYS_VIS]);
-  return $self->[_KEYS_VIS]->getResults();
+  my $keys_visitor;
+  if ($self->[_CACHE_FLAG]) {
+    $keys_visitor = $self->[_KEYS_VIS];
+  } else {
+    $keys_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
+    $keys_visitor->setNodeFilter(sub { return shift()->getNodeKey; } );
+  }
+  $self->[_BTREE]->accept($keys_visitor);
+  return $keys_visitor->getResults();
 }
 
 sub values {
   my $self = shift;
   return () unless ($self->[_COUNTER]);
-  $self->[_BTREE]->accept($self->[_VALUES_VIS]);
-  return $self->[_VALUES_VIS]->getResults();
+  my $values_visitor;
+  if ($self->[_CACHE_FLAG]) {
+    $values_visitor = $self->[_VALUES_VIS];
+  } else {
+    $values_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
+    $values_visitor->setNodeFilter(sub { return shift()->getNodeValue; } );
+  }
+  $self->[_BTREE]->accept($values_visitor);
+  return $values_visitor->getResults();
 }
 
 sub to_hash {
   my $self = shift;
   return () unless ($self->[_COUNTER]);
-  $self->[_BTREE]->accept($self->[_HASH_VIS]);
-  return $self->[_HASH_VIS]->getResults();
+  my $hash_visitor;
+  if ($self->[_CACHE_FLAG]) {
+    $hash_visitor = $self->[_HASH_VIS];
+  } else {
+    $hash_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
+    $hash_visitor->setNodeFilter(sub {
+				   my ($t) = @_;
+				   return ($t->getNodeKey, $t->getNodeValue());
+				 });
+  }
+  $self->[_BTREE]->accept($hash_visitor);
+  return $hash_visitor->getResults();
 }
 
 sub delete {
@@ -206,6 +250,27 @@ sub set {
   }
 }
 
+sub rebuild {
+  my $self = shift;
+  my $keys_visitor;
+  if ($self->[_CACHE_FLAG]) {
+    $keys_visitor = $self->[_KEYS_VIS];
+  } else {
+    $keys_visitor = Tree::Binary::Visitor::InOrderTraversal->new();
+    $keys_visitor->setNodeFilter(sub { return shift()->getNodeKey; } );
+  }
+  $self->[_BTREE]->accept($keys_visitor);
+  my @keys = $keys_visitor->getResults();
+
+  my $btree = Tree::Binary::Search->new();
+  $btree->useStringComparison();
+
+  foreach my $key (@keys) {
+    $btree->insert($key, $self->[_BTREE]->select($key));
+  }
+  $self->[_BTREE] = $btree;
+  return 1;
+}
 
 =head1 SEE ALSO
 

@@ -3,7 +3,7 @@
 #########################
 use strict;
 use Data::Dumper;
-use Test::More tests => 23 ;
+use Test::More tests => 26 ;
 
 #
 # Class Tests 1,2
@@ -54,6 +54,12 @@ $dictionary->set('qwerty' => 'quuuz');
 ok($dictionary->count == 6, 'count is still correct');
 
 $dictionary->delete('qwerty');
+
+ok($dictionary->rebuild(), 'rebuilt binary tree');
+
+ok($dictionary->get('aaaa') eq 'One','rebuilt tree contains old keys/values');
+
+ok($dictionary->count == 5, 'count is still correct');
 
 # vistor / hash
 my %hash = $dictionary->to_hash;
