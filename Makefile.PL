@@ -6,5 +6,5 @@ WriteMakefile(
     VERSION_FROM      => 'lib/Tree/Binary/Dictionary.pm', # finds $VERSION
     PREREQ_PM         => { Tree::Binary => 0.07 }, # e.g., Module::Name => 1.1
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      ( AUTHOR         => 'aaron trevena <teejay@droogs.org>') : ()),
+      ( AUTHOR         => 'aaron trevena <aaron.trevena@gmail.com>') : ()),
 );

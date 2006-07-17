@@ -111,7 +111,7 @@ returns the number of entries in the dictionary
 =cut
 
 use strict;
-our $VERSION = 0.04;
+our $VERSION = 1.01;
 
 use Tree::Binary::Search;
 use Tree::Binary::Visitor::InOrderTraversal;
